@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home Valuation Predictor</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-image: url("/static/Home.jpg");
+        background-size: cover;
+        background-position: center;
+      }
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent white */
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      form {
+        display: grid;
+        gap: 10px;
+      }
+      label {
+        font-weight: bold;
+      }
+      input[type="number"],
+      select,
+      button {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      button {
+        background-color: #007bff;
+        color: #fff;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      #result {
+        margin-top: 20px;
+        display: none;
+      }
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+      }
+
+      .tooltip .info {
+        display: none;
+        position: absolute;
+        z-index: 1;
+        background-color: #f9f9f9;
+        color: #333;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+        width: 200px;
+        bottom: calc(100% + 5px); /* Display tooltip above the label */
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .tooltip:hover .info {
+        display: block;
+      }
+      textarea {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Real-Time Home Valuation Predictor</h1>
+      <form id="prediction-form" method="POST" action="/predict">
+        <label for="location">Location:</label>
+        <select name="location" id="location">
+          <option value="" disabled selected>Select a location</option>
+        </select>
+        <label for="bedrooms">Number of Bedrooms:</label>
+        <input type="number" name="bedrooms" id="bedrooms" min="1" required />
+        <label for="bathrooms">Number of Bathrooms:</label>
+        <input type="number" name="bathrooms" id="bathrooms" min="1" required />
+        <label for="house-size">Home Size (sqft):</label>
+        <input type="number" name="house-size" id="house-size" required />
+        <label for="land-size">Land Size (perches):</label>
+        <input type="number" name="land-size" id="land-size" required />
+        <label for="garden">Availability of Garden:</label>
+        <select name="garden" id="garden">
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+        <label for="commercial-area">Presence in Commercial Area:</label>
+        <select name="commercial-area" id="commercial-area">
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+        <label for="luxury-level" class="tooltip">
+          Luxury Level:
+          <i class="fas fa-info-circle"></i>
+          <span class="info">
+            <b>Luxury Level</b> offers Fully Finished Home with Luxury Home
+            Amenities. It may include Features such as Solar Panel, Generator,
+            Swimming Pool, Jacuzzi along with Semi Luxury Home Amenities.
+            <br /><br />
+            <b>Semi-Luxury Level</b> offers Fully Finished Home with Semi-Luxury
+            Home Amenities. It may include Features such as Roller Gate, CCTV,
+            Servant-Facilty, Attached Bathrooms, AC along with Basic Home
+            Amenities. <br /><br />
+            <b>Basic Level</b> offers Fully Finished Home with Basic Home
+            Amenties. It may include Features such as Tiled Floor, Pantry
+            Cupboards, Parking, Water Heaters, etc.
+          </span>
+        </label>
+        <select name="luxury-level" id="luxury-level">
+          <option value="Basic">Basic</option>
+          <option value="Semi-Luxury">Semi-Luxury</option>
+          <option value="Luxury">Luxury</option>
+        </select>
+
+        <button type="submit">Predict Home Price</button>
+      </form>
+      <div id="result">
+        <h4 id="predicted-price"></h4>
+
+        <button id="show-explanation-btn">Show Explanation</button>
+        <div id="explanation" style="display: none"></div>
+
+        <textarea id="feedbackText" rows="4" cols="50"></textarea>
+        <button id="submit-feedback-btn">Submit Feedback</button>
+      </div>
+    </div>
+
+    <script>
+      // List of locations
+      var locations = [
+        "Ahangama ",
+        "Akkarepattu ",
+        "Akuressa ",
+        "Alawwa ",
+        "Alutgama ",
+        "Ambalangoda ",
+        "Ambalantota ",
+        "Ampara City ",
+        "Ampitiya ",
+        "Angoda ",
+        "Anuradhapura City ",
+        "Athurugiriya ",
+        "Avissawella ",
+        "Baddegama ",
+        "Badulla City ",
+        "Balangoda ",
+        "Bandaragama ",
+        "Bandarawela ",
+        "Batapola ",
+        "Battaramulla ",
+        "Batticaloa City ",
+        "Beliatta ",
+        "Bentota ",
+        "Beruwala ",
+        "Bingiriya ",
+        "Boralesgamuwa ",
+        "Chilaw ",
+        "Colombo 1 ",
+        "Colombo 10 ",
+        "Colombo 12 ",
+        "Colombo 13 ",
+        "Colombo 14 ",
+        "Colombo 15 ",
+        "Colombo 2 ",
+        "Colombo 3 ",
+        "Colombo 4 ",
+        "Colombo 5 ",
+        "Colombo 6 ",
+        "Colombo 7 ",
+        "Colombo 8 ",
+        "Colombo 9 ",
+        "Dambulla ",
+        "Dankotuwa ",
+        "Dehiwala ",
+        "Delgoda ",
+        "Deniyaya ",
+        "Deraniyagala ",
+        "Digana ",
+        "Dikwella ",
+        "Divulapitiya ",
+        "Diyatalawa ",
+        "Eheliyagoda ",
+        "Elpitiya ",
+        "Embilipitiya ",
+        "Galagedara ",
+        "Galewela ",
+        "Galgamuwa ",
+        "Galigamuwa ",
+        "Galle City ",
+        "Gampaha City ",
+        "Gampola ",
+        "Ganemulla ",
+        "Gelioya ",
+        "Ginigathhena ",
+        "Giriulla ",
+        "Godagama ",
+        "Hakmana ",
+        "Hali Ela ",
+        "Hambantota City ",
+        "Hanwella ",
+        "Hatton ",
+        "Hikkaduwa ",
+        "Homagama ",
+        "Horana ",
+        "Ibbagamuwa ",
+        "Ingiriya ",
+        "Ja-Ela ",
+        "Jaffna City ",
+        "Kadawatha ",
+        "Kadugannawa ",
+        "Kaduruwela ",
+        "Kaduwela ",
+        "Kalmunai ",
+        "Kalutara City ",
+        "Kamburugamuwa ",
+        "Kamburupitiya ",
+        "Kandana ",
+        "Kandy City ",
+        "Karapitiya ",
+        "Kataragama ",
+        "Katugastota ",
+        "Katunayake ",
+        "Kegalle City ",
+        "Kekanadura",
+        "Kekirawa ",
+        "Kelaniya ",
+        "Kesbewa ",
+        "Kiribathgoda ",
+        "Kitulgala ",
+        "Kohuwala ",
+        "Kolonnawa ",
+        "Kottawa ",
+        "Kotte ",
+        "Kuliyapitiya ",
+        "Kundasale ",
+        "Kurunegala City ",
+        "Kuruwita ",
+        "Maharagama ",
+        "Malabe ",
+        "Marawila ",
+        "Matale City ",
+        "Matara City ",
+        "Matugama ",
+        "Mawanella ",
+        "Mawathagama ",
+        "Medawachchiya ",
+        "Meegoda ",
+        "Mihintale ",
+        "Minuwangoda ",
+        "Mirigama ",
+        "Monaragala City ",
+        "Moratuwa ",
+        "Mount Lavinia ",
+        "Nallur ",
+        "Narammala ",
+        "Nattandiya ",
+        "Nawala ",
+        "Nawalapitiya ",
+        "Negombo ",
+        "Nikaweratiya ",
+        "Nittambuwa ",
+        "Nugegoda ",
+        "Nuwara Eliya City ",
+        "Padukka ",
+        "Palapathwela ",
+        "Panadura ",
+        "Pannala ",
+        "Pannipitiya ",
+        "Pelmadulla ",
+        "Peradeniya ",
+        "Pilimatalawa ",
+        "Piliyandala ",
+        "Polgahawela ",
+        "Polonnaruwa City ",
+        "Puttalam City ",
+        "Ragama ",
+        "Rajagiriya ",
+        "Rambukkana ",
+        "Ratmalana ",
+        "Ratnapura City ",
+        "Rattota ",
+        "Ruwanwella ",
+        "Seeduwa ",
+        "Talawa ",
+        "Tambuttegama ",
+        "Tangalla ",
+        "Thalawathugoda",
+        "Tissamaharama ",
+        "Trincomalee City ",
+        "Vavuniya City ",
+        "Veyangoda ",
+        "Wadduwa ",
+        "Warakapola ",
+        "Wariyapola ",
+        "Wattala ",
+        "Wattegama ",
+        "Weligama ",
+        "Welimada ",
+        "Wellampitiya ",
+        "Wellawaya ",
+        "Wennappuwa ",
+        "Yatawatta ",
+      ];
+
+      // Get the select element
+      var locationSelect = document.getElementById("location");
+
+      // Loop through the locations array and add options to the select element
+      locations.forEach(function (location) {
+        var option = document.createElement("option");
+        option.text = location;
+        option.value = location;
+        locationSelect.appendChild(option);
+      });
+
+      document
+        .getElementById("prediction-form")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+          var form = document.getElementById("prediction-form");
+          var formData = new FormData(form);
+          fetch("/predict", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => response.json()) // Parse response as JSON
+            .then((data) => {
+              // Display predicted price
+              var predictedPrice = data.predicted_price;
+              var modelexplanation = data.model_explanation;
+              document.getElementById("predicted-price").innerHTML =
+                "Predicted Price: Rs. " +
+                predictedPrice.toFixed(2) +
+                " millions";
+              document.getElementById("explanation").innerHTML =
+                "Based on the analysis, the following features have influenced the house value predictor to make the prediction: \n" +
+                modelexplanation;
+              document.getElementById("result").style.display = "block"; // Show result container
+            })
+            .catch((error) => console.error("Error:", error));
+        });
+
+      document
+        .getElementById("submit-feedback-btn")
+        .addEventListener("click", function () {
+          var feedback = document.getElementById("feedbackText").value.trim();
+          // saveFeedbackLocally(feedback);
+          document.getElementById("feedbackText").value = "";
+          fetch("/submit-feedback", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ feedback: feedback }),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Network response was not ok");
+              }
+              return response.text();
+            })
+            .then((data) => {
+              console.log(data);
+              document.getElementById("feedbackText").value = "";
+            })
+            .catch((error) => {
+              console.error("Error submitting feedback:", error);
+            });
+        });
+
+      // function saveFeedbackLocally(feedback) {
+      //     if (localStorage.getItem("feedbacks")) {
+      //         var existingFeedbacks = JSON.parse(localStorage.getItem("feedbacks"));
+      //         existingFeedbacks.push(feedback);
+      //         localStorage.setItem("feedbacks", JSON.stringify(existingFeedbacks));
+      //     } else {
+      //         var feedbacks = [feedback];
+      //         localStorage.setItem("feedbacks", JSON.stringify(feedbacks));
+      //     }
+      // }
+
+      document
+        .getElementById("show-explanation-btn")
+        .addEventListener("click", function () {
+          document.getElementById("explanation").style.display = "block";
+        });
+    </script>
+  </body>
+</html>
